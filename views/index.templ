@@ -1,0 +1,163 @@
+package views
+
+import (
+	"github.com/Francesco99975/casaintake/internal/config"
+	"github.com/Francesco99975/casaintake/views/layouts"
+	"github.com/Francesco99975/casaintake/views/ui"
+)
+
+templ Index(site config.Site) {
+	@layouts.Base(site) {
+		<main class="flex-1 w-full">
+			<div class="mx-auto w-full max-w-3xl px-4 py-8 sm:py-12 md:py-16">
+				<!-- Heading -->
+				<header class="mb-8 text-center sm:text-left">
+					<span class="inline-flex items-center gap-2 rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-primary">
+						<span class="pulse-dot"></span>
+						New Patient
+					</span>
+					<h1 class="mt-4 text-2xl sm:text-3xl md:text-4xl font-bold text-fg text-balance">
+						Patient Information
+					</h1>
+					<p class="mt-2 text-sm sm:text-base text-muted leading-relaxed text-pretty">
+						Please complete the form below. Fields marked with an asterisk are required.
+					</p>
+				</header>
+				<!-- Form -->
+				<form
+					id="patient-form"
+					class="card relative p-5 sm:p-7 md:p-8"
+					hx-post="/patients"
+					hx-swap="none"
+					{ ui.WithLoading("patient-loading")... }
+				>
+					@ui.FormLoading("patient-loading", "Saving patient information…")
+					<!-- ============ SECTION: Personal details ============ -->
+					<section aria-labelledby="sec-personal">
+						<h2 id="sec-personal" class="text-base sm:text-lg font-semibold text-fg">
+							Personal &amp; Contact
+						</h2>
+						<div class="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5">
+							@ui.Input(ui.InputProps{
+								Name:        "first_name",
+								Type:        ui.InputText,
+								Label:       "First name *",
+								Placeholder: "First name",
+								Required:    true,
+								Attrs:       templ.Attributes{"autocomplete": "given-name"},
+							})
+							@ui.Input(ui.InputProps{
+								Name:        "last_name",
+								Type:        ui.InputText,
+								Label:       "Last name *",
+								Placeholder: "Last name",
+								Required:    true,
+								Attrs:       templ.Attributes{"autocomplete": "family-name"},
+							})
+							@ui.DateOfBirth(ui.DateOfBirthProps{
+								Name:     "dob",
+								Label:    "Date of birth *",
+								Hint:     "Day / Month / Year",
+								MaxAge:   120,
+								Required: true,
+							})
+							@ui.PhoneInput(ui.PhoneInputProps{
+								Name:           "phone",
+								Label:          "Phone *",
+								DefaultCountry: "CA",
+								Required:       true,
+							})
+							<div class="sm:col-span-2">
+								@ui.Input(ui.InputProps{
+									Name:        "email",
+									Type:        ui.InputEmail,
+									Label:       "E-mail *",
+									Placeholder: "name@example.com",
+									Attrs:       templ.Attributes{"autocomplete": "email"},
+								})
+							</div>
+							<div class="sm:col-span-2">
+								@ui.AddressInput(ui.AddressInputProps{
+									Name:          "address",
+									Label:         "Address *",
+									Hint:          "Start typing to search, or enter manually",
+									SearchURL:     "/api/v1/address/lookup",
+									Provider:      ui.AddressCanadaPost,
+									CountryFilter: "CA",
+								})
+							</div>
+						</div>
+					</section>
+					<hr class="my-6 sm:my-7 border-border"/>
+					<!-- ============ SECTION: Insurance ============ -->
+					<section aria-labelledby="sec-insurance">
+						<h2 id="sec-insurance" class="text-base sm:text-lg font-semibold text-fg">
+							Insurance
+						</h2>
+						<div class="mt-4 grid grid-cols-1 gap-4 sm:gap-5">
+							@ui.OHIPInput(ui.OHIPInputProps{
+								Name:     "ohip",
+								Label:    "OHIP number",
+								Hint:     "Ontario Health Card",
+								Value:    "",
+								Required: false,
+								Danger:   false,
+							})
+							@ui.Textarea(ui.TextareaProps{
+								Name:        "other_insurance",
+								Label:       "Other insurance information",
+								Placeholder: "Provider, policy / group number, and any other coverage details",
+								Rows:        3,
+							})
+						</div>
+					</section>
+					<hr class="my-6 sm:my-7 border-border"/>
+					<!-- ============ SECTION: Medical history ============ -->
+					<section aria-labelledby="sec-medical">
+						<h2 id="sec-medical" class="text-base sm:text-lg font-semibold text-fg">
+							Medical History
+						</h2>
+						<p class="mt-1 text-sm text-muted leading-relaxed">
+							Please indicate if you have any of these conditions.
+						</p>
+						<div class="mt-4">
+							@ui.CheckboxGroupTiles("", false,
+								ui.CheckboxProps{Name: "conditions", Value: "diabetes", Label: "Diabetes"},
+								ui.CheckboxProps{Name: "conditions", Value: "cholesterol", Label: "Cholesterol"},
+								ui.CheckboxProps{Name: "conditions", Value: "blood_pressure", Label: "Blood Pressure"},
+								ui.CheckboxProps{Name: "conditions", Value: "heart_problems", Label: "Heart Problems"},
+								ui.CheckboxProps{Name: "conditions", Value: "arthritis", Label: "Arthritis"},
+								ui.CheckboxProps{Name: "conditions", Value: "respiratory", Label: "Respiratory"},
+								ui.CheckboxProps{Name: "conditions", Value: "hearing_issues", Label: "Hearing Issues"},
+								ui.CheckboxProps{Name: "conditions", Value: "skin_conditions", Label: "Skin Conditions"},
+							)
+						</div>
+						<div class="mt-4">
+							@ui.Textarea(ui.TextareaProps{
+								Name:        "other_conditions",
+								Label:       "Other",
+								Placeholder: "List any other conditions, allergies, or relevant medical history",
+								Rows:        3,
+							})
+						</div>
+					</section>
+					<!-- ============ Actions ============ -->
+					<div class="mt-8 flex flex-col-reverse sm:flex-row sm:items-center sm:justify-end gap-3">
+						<button
+							type="reset"
+							class="btn-base w-full sm:w-auto rounded-lg border border-border bg-panel px-5 py-3 text-sm font-medium text-fg hover:bg-std"
+						>
+							Clear
+						</button>
+						<button
+							type="submit"
+							class="btn-base w-full sm:w-auto rounded-lg bg-primary px-6 py-3 text-sm font-semibold text-primary-fg"
+						>
+							Save patient information
+						</button>
+					</div>
+				</form>
+			</div>
+		</main>
+	}
+}

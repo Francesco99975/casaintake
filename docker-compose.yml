@@ -1,0 +1,73 @@
+services:
+  casaintakedb:
+    container_name: casaintakedb
+    image: postgres:15.3-alpine
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U Francesco99975 -d casaintakedb"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    labels:
+      - traefik.enable=false
+    networks:
+      - casaintakenet
+    environment:
+      - POSTGRES_USER
+      - POSTGRES_PASSWORD
+      - POSTGRES_DB
+    ports:
+      - "5467:5432"
+    volumes:
+      - casaintakepgdata:/var/lib/postgresql/data
+      - casaintakepgconf:/etc/postgresql
+      - casaintakepglog:/var/log/postgresql
+  casaintake:
+    container_name: casaintake
+    image: casaintake
+    restart: unless-stopped
+    depends_on:
+      casaintakedb:
+        condition: service_healthy
+    environment:
+      - GO_ENV
+      - HOST
+      - PORT
+      - DSN
+      - NTFY
+      - METRICS_SECRET
+      - PROMETHEUS
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3637/healthcheck"]
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.casaintake.rule=Host(`casaintake.example.com`)
+      - traefik.http.routers.casaintake.entrypoints=web,websecure
+      - traefik.http.routers.casaintake.service=casaintake
+      - traefik.http.services.casaintake.loadbalancer.server.port=3637
+      - traefik.http.routers.casaintake.tls=true
+      - traefik.http.routers.casaintake.tls.certresolver=letsencrypt
+      - traefik.http.routers.casaintake.middlewares=websocket-headers,forwardedheaders
+    networks:
+      - casaintakenet
+      - proxy
+      - monitoring
+    ports:
+      - 3637:3637
+
+networks:
+  proxy:
+    external: true
+  monitoring:
+    external: true
+  casaintakenet:
+    driver: bridge
+    external: false
+
+volumes:
+  casaintakepgdata:
+    driver: local
+  casaintakepgconf:
+    driver: local
+  casaintakepglog:
+    driver: local

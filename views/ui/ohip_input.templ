@@ -1,0 +1,129 @@
+package ui
+
+import "fmt"
+
+// OHIPInputProps configures the Ontario Health Card (OHIP) field.
+type OHIPInputProps struct {
+	Name     string
+	Label    string
+	Hint     string
+	Value    string // stored value: "1234567890 XX", or "NONE" when the patient has no card
+	Required bool
+	Danger   bool
+	Attrs    templ.Attributes
+}
+
+// ohipXData is the complete inline Alpine component — no companion script.
+//
+// OHIP number structure (validated live as the user types):
+//   - 10 numeric digits, displayed grouped as 1234-567-890
+//   - the 10 digits satisfy the Luhn (mod 10) checksum
+//   - a 2-letter version code (e.g. "MH") follows the number
+//
+// Config comes from this.$el.dataset (required / initial). The real submitted
+// value is a hidden input: "<10 digits> <VC>", or the literal "NONE" when the
+// patient checks "I don't have an OHIP card".
+const ohipXData = `{
+	disabled:false, required:false, raw:'', version:'',
+	init(){
+		const d=this.$el.dataset;
+		this.required=d.required==='true';
+		if(d.initial) this.parse(d.initial);
+		this.format();
+		this.$watch('value',()=>{ this.$refs.hidden.dispatchEvent(new Event('change',{bubbles:true})); });
+		this.$watch('disabled',()=>{ this.$refs.hidden.dispatchEvent(new Event('change',{bubbles:true})); });
+	},
+	get digits(){ return this.raw.replace(/\D/g,'').slice(0,10); },
+	get ver(){ return this.version.replace(/[^a-zA-Z]/g,'').toUpperCase().slice(0,2); },
+	luhn(n){ let sum=0, alt=false; for(let i=n.length-1;i>=0;i--){ let d=parseInt(n[i],10); if(alt){ d*=2; if(d>9)d-=9; } sum+=d; alt=!alt; } return n.length===10 && sum%10===0; },
+	get numberValid(){ return this.digits.length===10 && this.luhn(this.digits); },
+	get valid(){ return this.disabled || (this.numberValid && this.ver.length===2); },
+	get invalid(){
+		if(this.disabled) return false;
+		return (this.digits.length>0 && this.digits.length<10)
+			|| (this.digits.length===10 && !this.numberValid)
+			|| (this.ver.length===1);
+	},
+	get message(){
+		if(this.disabled) return '';
+		if(this.digits.length>0 && this.digits.length<10) return 'Health number must be 10 digits.';
+		if(this.digits.length===10 && !this.luhn(this.digits)) return 'This health number fails the checksum — please re-check the digits.';
+		if(this.ver.length===1) return 'Version code must be 2 letters.';
+		return '';
+	},
+	get value(){ if(this.disabled) return 'NONE'; if(!this.digits) return ''; return this.digits + (this.ver ? (' '+this.ver) : ''); },
+	format(){ const d=this.digits; let out=d; if(d.length>7)out=d.slice(0,4)+'-'+d.slice(4,7)+'-'+d.slice(7); else if(d.length>4)out=d.slice(0,4)+'-'+d.slice(4); this.raw=out; },
+	onVersion(){ this.version=this.ver; },
+	toggle(){ if(this.disabled){ this.raw=''; this.version=''; } },
+	parse(v){ const s=String(v).trim(); if(s.toUpperCase()==='NONE'){ this.disabled=true; return; } const m=s.match(/([0-9]{10})\s*([A-Za-z]{0,2})/); if(m){ this.raw=m[1]; this.version=(m[2]||'').toUpperCase(); } }
+}`
+
+// OHIPInput renders a labelled Ontario Health Card field with live structural
+// validation (10-digit Luhn checksum + 2-letter version code) and a checkbox
+// to mark the patient as having no card. Self-contained: just needs Alpine.
+templ OHIPInput(p OHIPInputProps) {
+	<div
+		class="block"
+		x-data={ ohipXData }
+		data-initial={ p.Value }
+		data-required={ fmt.Sprintf("%t", p.Required) }
+	>
+		if p.Label != "" {
+			if !p.Danger {
+				@FieldLabel(p.Label, p.Hint)
+			} else {
+				@DangerLabel(p.Label, p.Hint)
+			}
+		}
+		<!-- Group: health-card number + version code, styled as one field-like row -->
+		<div
+			class="flex items-stretch rounded-lg border border-border bg-surface transition-colors focus-within:border-primary focus-within:ring-2 focus-within:ring-ring/40"
+			:class="disabled ? 'opacity-50' : (invalid ? 'border-error' : '')"
+		>
+			<!-- 10-digit number, formatted 1234-567-890 -->
+			<input
+				type="text"
+				inputmode="numeric"
+				autocomplete="off"
+				x-model="raw"
+				@input="format()"
+				:disabled="disabled"
+				placeholder="1234-567-890"
+				maxlength="12"
+				class="flex-1 min-w-0 bg-transparent px-3 py-2.5 text-sm text-fg placeholder:text-muted focus:outline-none tabular-nums disabled:cursor-not-allowed"
+				aria-label="Health card number"
+			/>
+			<!-- valid tick appears once the number passes the checksum -->
+			<span
+				x-show="!disabled && numberValid"
+				x-cloak
+				class="flex items-center pr-1 text-success"
+				aria-hidden="true"
+			>
+				<svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"></path></svg>
+			</span>
+			<span class="my-1.5 w-px bg-border" aria-hidden="true"></span>
+			<!-- 2-letter version code -->
+			<input
+				type="text"
+				x-model="version"
+				@input="onVersion()"
+				:disabled="disabled"
+				placeholder="VC"
+				maxlength="2"
+				class="flex-none w-16 bg-transparent px-2 py-2.5 text-sm text-fg placeholder:text-muted focus:outline-none uppercase text-center tracking-[0.3em] disabled:cursor-not-allowed"
+				aria-label="Version code"
+			/>
+		</div>
+		<!-- "No OHIP" toggle: disables + clears the field, submits "NONE" -->
+		<label class="mt-2 flex items-center gap-2 cursor-pointer select-none w-fit">
+			<input type="checkbox" class="check" x-model="disabled" @change="toggle()"/>
+			<span class="text-sm text-muted">I don't have an OHIP card</span>
+		</label>
+		<!-- Live integrity feedback -->
+		<p x-show="message" x-cloak x-text="message" class="mt-1 text-xs text-error"></p>
+		<p x-show="!disabled && valid" x-cloak class="mt-1 text-xs text-success">Valid Ontario health card.</p>
+		<!-- The real submitted value: "<digits> <VC>" or "NONE". -->
+		<input type="hidden" name={ p.Name } x-ref="hidden" :value="value" { p.Attrs... }/>
+	</div>
+}

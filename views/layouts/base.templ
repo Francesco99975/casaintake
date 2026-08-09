@@ -1,0 +1,17 @@
+package layouts
+
+import (
+	"github.com/Francesco99975/casaintake/internal/config"
+	"github.com/Francesco99975/casaintake/views/components"
+	"strconv"
+)
+
+// Base layout for unauthenticated pages
+templ Base(site config.Site) {
+	@CoreHTML(site) {
+		<div class="min-h-screen flex flex-col">
+			{ children... }
+			@components.Footer(site.AppName, strconv.Itoa(site.Year))
+		</div>
+	}
+}

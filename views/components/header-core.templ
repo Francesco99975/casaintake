@@ -1,0 +1,15 @@
+package components
+
+import "github.com/Francesco99975/casaintake/internal/config"
+
+templ HeaderCore(site config.Site) {
+	<header class="sticky top-0 z-50 bg-primary/95 backdrop-blur-md text-std shadow-lg border-b border-accent/20" hx-boost="true">
+		<div class="container mx-auto px-4 lg:px-6">
+			<div
+				class="flex items-center justify-between h-16"
+			>
+				{ children... }
+			</div>
+		</div>
+	</header>
+}
