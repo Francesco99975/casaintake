@@ -2,26 +2,26 @@ name: CI
 
 on:
   push:
-    branches: [ master ]
+    branches: [master]
     paths-ignore:
-      - '**.md'
-      - 'docs/**'
+      - "**.md"
+      - "docs/**"
   pull_request:
-    branches: [ master ]
+    branches: [master]
     paths-ignore:
-      - '**.md'
-      - 'docs/**'
+      - "**.md"
+      - "docs/**"
 
 jobs:
   lint-and-test:
     name: Lint and Test
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - name: Set up Go
-        uses: actions/setup-go@v6
+        uses: actions/setup-go@v7
         with:
-          go-version: '1.26.1'
+          go-version: "1.26.4"
           cache: true
 
       - name: Install templ
@@ -57,15 +57,15 @@ jobs:
           output: both
 
       - name: Add Coverage PR Comment
-        uses: marocchino/sticky-pull-request-comment@v2
+        uses: marocchino/sticky-pull-request-comment@v3
         if: github.event_name == 'pull_request'
         with:
           header: test-coverage
           recreate: true
-          path: code-coverage-results.md   # Fixed: removed the broken markdown link syntax
+          path: code-coverage-results.md # Fixed: removed the broken markdown link syntax
 
       - name: Generate Coverage Badge
-        uses: tj-actions/coverage-badge-go@v3   # This action reads the .out file directly and generates a badge
+        uses: tj-actions/coverage-badge-go@v3 # This action reads the .out file directly and generates a badge
         with:
-          green: "80"   # optional: customize thresholds if needed
+          green: "80" # optional: customize thresholds if needed
           filename: coverage.out
