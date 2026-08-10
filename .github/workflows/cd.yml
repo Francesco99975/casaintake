@@ -2,7 +2,7 @@ name: CD
 
 on:
   workflow_run:
-    workflows: ["CI"]   # Must exactly match the name: CI from your CI file
+    workflows: ["CI"] # Must exactly match the name: CI from your CI file
     types:
       - completed
 
@@ -46,7 +46,7 @@ jobs:
     if: ${{ github.event.workflow_run.conclusion == 'success' }}
     environment:
       name: production
-      url: https://casaintake.example.com
+      url: https://casaintake.urx.ink
     steps:
       - name: Download Docker image
         uses: actions/download-artifact@v8
@@ -63,7 +63,7 @@ jobs:
         with:
           oauth-client-id: ${{ secrets.TS_OAUTH_CLIENT_ID }}
           oauth-secret: ${{ secrets.TS_OAUTH_CLIENT_SECRET }}
-          tags: tag:ci  # Adjust this tag as needed for your Tailnet ACLs
+          tags: tag:ci # Adjust this tag as needed for your Tailnet ACLs
 
       - name: Set up SSH
         uses: webfactory/ssh-agent@v0.10.0
@@ -73,16 +73,16 @@ jobs:
       - name: Add host key
         run: |
           mkdir -p ~/.ssh
-          ssh-keyscan prod_server >> ~/.ssh/known_hosts
+          ssh-keyscan avalon >> ~/.ssh/known_hosts
 
       - name: Deploy to production # If using doppler, Remember to run: doppler setup on the prod server
         run: |
           # Transfer files to production server
-          scp casaintake.tar docker-compose.yml Francesco99975@prod_server:~/apps/casaintake/
+          scp casaintake.tar docker-compose.yml kalairen@avalon:~/work/casaintake/
 
           # SSH into server and deploy
-          ssh Francesco99975@prod_server << 'EOF'
-            cd ~/apps/casaintake
+          ssh kalairen@avalon << 'EOF'
+            cd ~/work/casaintake
             pwd
             docker load < casaintake.tar
             doppler run -- docker compose up -d

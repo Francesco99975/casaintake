@@ -31,9 +31,24 @@ type PageMeta struct {
 
 var pageMeta = map[string]PageMeta{
 	"/": {
+		Title:       "Casa Medica Intake",
+		Description: "Patient Intake Auth",
+		Indexable:   false,
+	},
+	"/intake": {
 		Title:       "Patient Intake",
-		Description: "Patient intake form",
-		Indexable:   true,
+		Description: "Patient Intake form",
+		Indexable:   false,
+	},
+	"/privacy-policy": {
+		Title:       "Privacy Policy",
+		Description: "Privacy policy for the service",
+		Indexable:   false,
+	},
+	"/terms": {
+		Title:       "Terms and Conditions",
+		Description: "Terms and conditions for using the service",
+		Indexable:   false,
 	},
 }
 
@@ -93,7 +108,7 @@ func generateSitemap() []byte {
 
 	urls := []URL{
 		{Loc: baseURL + "/", LastMod: time.Now().Format("2006-01-02")},
-		{Loc: baseURL + "/privacy", LastMod: time.Now().Format("2006-01-02")},
+		{Loc: baseURL + "/privacy-policy", LastMod: time.Now().Format("2006-01-02")},
 		{Loc: baseURL + "/terms", LastMod: time.Now().Format("2006-01-02")},
 	}
 
@@ -146,7 +161,7 @@ func GetDefaultSite(r *http.Request) Site {
 		Organization: Organization{
 			Context:      "https://schema.org",
 			Type:         "Organization",
-			Name:         "GoSOT",
+			Name:         "Casa Medica Intake",
 			Url:          boot.Environment.URL,
 			Logo:         fmt.Sprintf("%s/assets/images/pwa-512x512.png", boot.Environment.URL),
 			ContactPoint: []ContactPoint{{Type: "Person", Telephone: "+1-202-555-0144", ContactType: "customer service"}},

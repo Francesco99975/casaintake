@@ -262,7 +262,7 @@ btnID := p.Name + "-trigger"
 			@keydown="if(open && $event.key.length === 1) typeahead($event.key)"
 			class="field flex items-center justify-between w-full text-left"
 		>
-			<span x-text="labelOf(sel) || '{ placeholder }'" :class="!sel && 'text-muted'"></span>
+			<span x-text={ "labelOf(sel) || '" + placeholder + "'" } :class="!sel && 'text-muted'"></span>
 			<span class="text-muted transition-transform" :class="open && 'rotate-180'">▾</span>
 		</button>
 		<input

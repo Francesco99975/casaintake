@@ -1,5 +1,24 @@
 package ui
 
+import "github.com/Francesco99975/casaintake/views/icons"
+
+// ThemeToggle flips the inherited `darkMode` reactive property. HeaderCore
+// owns the $watch that persists to localStorage and toggles html.dark.
+//
+// REQUIRED PARENT SCOPE: an ancestor x-data must expose `darkMode` (bool).
+// If you use @HeaderCore (directly or via @Header) this is already true.
+templ ThemeToggle() {
+	<button
+		@click="darkMode = !darkMode"
+		class="p-2.5 rounded-full bg-accent/10 hover:bg-accent/20 transition-all duration-200 hover:scale-110 focus:outline-none focus:ring-2 focus:ring-accent/50 focus:ring-offset-2 focus:ring-offset-primary"
+		aria-label="Toggle dark mode"
+		:aria-pressed="darkMode.toString()"
+	>
+		@icons.Sun("stroke-primary w-5 h-5")
+		@icons.Moon("stroke-primary w-5 h-5")
+	</button>
+}
+
 type DisplayStyle string
 
 const (
@@ -76,10 +95,11 @@ templ MarqueeReverse(items ...MarqueeItem) {
 // identical to the cyberpunk version (track rendered twice, looping at
 // translateX(-50%)); only the type treatment is softened for the general skin.
 templ MarqueeDir(reverse bool, items ...MarqueeItem) {
-	{{ list := items
+	{{list := items
 if len(list) == 0 {
 	list = defaultMarqueeItems()
-} }}
+}
+	}}
 	<div class="border-b border-border bg-muted/10 overflow-hidden" role="marquee" aria-label="Status ticker">
 		<div class={ "marquee-track text-xs py-2", templ.KV("marquee-track--reverse", reverse) }>
 			for i := 0; i < 2; i++ {

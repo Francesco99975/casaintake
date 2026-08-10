@@ -5,8 +5,11 @@ import (
 	"log/slog"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/Francesco99975/casaintake/cmd/boot"
+	"github.com/Francesco99975/casaintake/internal/models"
+	"github.com/resend/resend-go/v3"
 )
 
 func Notify(topic string, message string) {
@@ -21,4 +24,37 @@ func Notify(topic string, message string) {
 		slog.Debug("Notification sent with status code", slog.Int("status", resp.StatusCode))
 		defer func() { _ = resp.Body.Close() }()
 	}
+}
+
+func ResendNewPatientTemplate(email string, patient models.PatientIntakeRequest) {
+	client := resend.NewClient(boot.Environment.ResendAPIKey)
+
+	params := &resend.SendEmailRequest{
+		From: "Patients Intake <intake@auth.urx.ink>",
+		To:   []string{email},
+		Template: &resend.EmailTemplate{
+			Id: "patient-form-submission",
+			Variables: map[string]any{
+				"FIRSTNAME":       patient.FirstName,
+				"LASTNAME":        patient.LastName,
+				"DOB":             patient.MakeDOBReadable(),
+				"ADDRESS":         patient.StringifyAddress(),
+				"PHONE":           patient.Phone,
+				"OHIP":            patient.OHIP,
+				"INSURANCE_NOTES": patient.OtherInsurance,
+				"PATIENT_EMAIL":   patient.Email,
+				"MEDICAL_HISTORY": strings.Join(patient.Conditions, ","),
+				"EXTRA_NOTES":     patient.OtherConditions,
+				"SUBMITTED_AT":    time.Now().Format("January 2, 2006 at 15:04"),
+			},
+		},
+	}
+
+	sent, err := client.Emails.Send(params)
+	if err != nil {
+		slog.Error("Failed to send email", slog.Any("error", err))
+		return
+	}
+
+	slog.Info("Email sent to", slog.String("email", email), slog.String("id", sent.Id))
 }

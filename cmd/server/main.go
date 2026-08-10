@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/Francesco99975/casaintake/cmd/boot"
+	"github.com/Francesco99975/casaintake/internal/auth"
 	"github.com/Francesco99975/casaintake/internal/config"
 	"github.com/labstack/echo/v4"
 
@@ -28,10 +29,7 @@ func main() {
 		log.Fatalf("Failed to load Vite manifest: %v", err)
 	}
 
-	// Create a root ctx and a CancelFunc which can be used to cancel retentionMap goroutine
-	rootCtx := context.Background()
-	ctx, cancel := context.WithCancel(rootCtx)
-	defer cancel()
+	auth.InitSessionStore()
 
 	port := boot.Environment.Port
 
@@ -54,7 +52,7 @@ func main() {
 	signal.Notify(quit, os.Interrupt)
 	<-quit
 	helpers.Notify("casaintake", "Server is shutting down")
-	ctx, cancel = context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 	if err := e.Shutdown(ctx); err != nil {
 		helpers.Notify("casaintake", fmt.Sprintf("Server forced to shutdown: %v", err))

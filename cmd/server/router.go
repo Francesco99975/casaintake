@@ -13,6 +13,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 
 	"github.com/Francesco99975/casaintake/cmd/boot"
+	"github.com/Francesco99975/casaintake/internal/auth"
 	"github.com/Francesco99975/casaintake/internal/config"
 	"github.com/Francesco99975/casaintake/internal/enums"
 	"github.com/Francesco99975/casaintake/internal/helpers"
@@ -21,6 +22,7 @@ import (
 	"github.com/Francesco99975/casaintake/internal/middlewares"
 	"github.com/Francesco99975/casaintake/views"
 
+	"github.com/labstack/echo-contrib/session"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 )
@@ -30,6 +32,7 @@ func createRouter() *echo.Echo {
 	e.Logger.SetOutput(io.Discard)
 	e.HideBanner = true
 	e.HidePort = true
+	e.Use(session.Middleware(auth.SessionStore))
 	e.Use(middlewares.SlogLogger())
 	e.Use(middleware.RemoveTrailingSlash())
 	e.Use(middlewares.RateLimiter())
@@ -115,7 +118,7 @@ func createRouter() *echo.Echo {
 
 		if boot.Environment.GoEnv == enums.Environments.PRODUCTION {
 			content = fmt.Sprintf(`User-agent: *
-Allow: /
+Disallow: /
 
 Sitemap: %s/sitemap.xml
 `, baseURL)
@@ -148,7 +151,13 @@ Sitemap: %s/sitemap.xml
 		},
 	}))
 
-	web.GET("/", controllers.Index())
+	web.GET("/", controllers.Index(), middlewares.GuestMiddleware())
+	web.POST("/authorize", controllers.Authorize())
+	web.GET("/intake", controllers.Intake(), middlewares.AuthMiddleware())
+	web.POST("/intake", controllers.NewPatient(), middlewares.AuthMiddleware())
+	web.POST("/logout", controllers.Logout(), middlewares.AuthMiddleware())
+	web.GET("/privacy-policy", controllers.PrivacyPolicy())
+	web.GET("/terms", controllers.Terms())
 
 	e.HTTPErrorHandler = serverErrorHandler
 

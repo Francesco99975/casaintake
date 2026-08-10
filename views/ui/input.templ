@@ -648,12 +648,13 @@ templ FracturedAddress(p FracturedAddressProps) {
 							Label:       "Province",
 							Placeholder: "Select province…",
 							Required:    p.Required,
+							Selected:    "ON",
 							Opts:        canadianProvinces(),
 						})
 					}
 				</div>
 				<!-- Postal / ZIP, live-formatted + validated for Canada -->
-				<div class="col-span-6 sm:col-span-3">
+				<div class="col-span-6 sm:col-span-3 mt-[5.5]">
 					<span class="block text-xs font-medium text-muted mb-1" x-text="isCA() ? 'Postal code' : 'ZIP / Postal code'"></span>
 					<input
 						type="text"
@@ -1233,6 +1234,7 @@ templ DateOfBirth(p DateOfBirthProps) {
 				aria-label="Day of birth"
 				class="field appearance-none bg-no-repeat pr-8"
 				:class="invalid ? 'border-error' : ''"
+				required?={ p.Required }
 			>
 				<option value="" disabled>Day</option>
 				<template x-for="d in days" :key="d">
@@ -1245,6 +1247,7 @@ templ DateOfBirth(p DateOfBirthProps) {
 				aria-label="Month of birth"
 				class="field appearance-none bg-no-repeat pr-8"
 				:class="invalid ? 'border-error' : ''"
+				required?={ p.Required }
 			>
 				<option value="" disabled>Month</option>
 				<template x-for="(m, i) in monthNames" :key="i">
@@ -1257,6 +1260,7 @@ templ DateOfBirth(p DateOfBirthProps) {
 				aria-label="Year of birth"
 				class="field appearance-none bg-no-repeat pr-8"
 				:class="invalid ? 'border-error' : ''"
+				required?={ p.Required }
 			>
 				<option value="" disabled>Year</option>
 				<template x-for="y in years" :key="y">
@@ -1462,6 +1466,7 @@ if dc == "" {
 				placeholder={ ph }
 				class="flex-1 min-w-0 bg-transparent px-3 py-2.5 text-sm text-fg placeholder:text-muted focus:outline-none"
 				aria-label="Phone number"
+				required?={ p.Required }
 			/>
 		</div>
 		<!-- The real submitted value: normalized E.164. -->

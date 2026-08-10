@@ -1,14 +1,32 @@
 package components
 
+// Footer is the site-wide footer: a centered copyright strip with Privacy
+// Policy and Terms links, preserving the original primary/accent styling.
+//
+// UI/UX only — point the hrefs at the real routes when wiring up the backend.
 templ Footer(appName, year string) {
-	<footer class="relative bg-primary/80 backdrop-blur-md border-t border-primary/30 dark:border-primary/50 py-3 mt-auto transition-colors duration-300">
+	<footer class="relative bg-primary/80 backdrop-blur-md border-t border-primary/30 dark:border-primary/50 py-6 mt-auto transition-colors duration-300">
 		<div class="container mx-auto px-4">
-			<div class="flex flex-col items-center justify-center space-y-4">
+			<div class="flex flex-col items-center justify-between gap-3 sm:flex-row">
 				<p class="text-sm text-std/70 dark:text-std/60 transition-colors duration-300">
 					&copy; { year } <span class="font-semibold text-std/90 dark:text-std/80">{ appName }</span>. All rights reserved.
 				</p>
-				<div class="w-16 h-px bg-linear-to-r from-transparent via-accent/50 to-transparent"></div>
+				<nav aria-label="Legal" class="flex items-center gap-x-4">
+					@footerInlineLink("/privacy-policy", "Privacy Policy")
+					<span class="text-std/30" aria-hidden="true">&middot;</span>
+					@footerInlineLink("/terms", "Terms & Conditions")
+				</nav>
 			</div>
 		</div>
 	</footer>
+}
+
+// footerInlineLink is a compact link used in the legal strip.
+templ footerInlineLink(href, label string) {
+	<a
+		href={ templ.SafeURL(href) }
+		class="text-sm text-std/70 hover:text-std hover:underline underline-offset-4 transition-colors duration-200 dark:text-std/60 dark:hover:text-std/90"
+	>
+		{ label }
+	</a>
 }

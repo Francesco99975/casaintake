@@ -207,6 +207,31 @@
         cursor: not-allowed;
     }
 
+    .legal h1 {
+        @apply font-bold italic text-2xl text-accent;
+    }
+
+    .legal h2 {
+        @apply font-bold text-accent italic text-xl;
+    }
+
+    .legal h3 {
+        @apply text-accent italic text-lg;
+    }
+
+    .legal p {
+        @apply w-full md:w-2/3 leading-6 my-2;
+    }
+
+    .legal li,
+    .legal li > p {
+        @apply py-2 italic underline text-center w-full underline-offset-4;
+    }
+
+    .legal ul {
+        @apply flex flex-col w-full md:w-2/3 justify-center items-center py-2;
+    }
+
     /* ------- Checkbox / Radio / Switch ------- */
     .check {
         appearance: none;

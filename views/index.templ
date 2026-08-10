@@ -2,13 +2,115 @@ package views
 
 import (
 	"github.com/Francesco99975/casaintake/internal/config"
+	"github.com/Francesco99975/casaintake/views/icons"
 	"github.com/Francesco99975/casaintake/views/layouts"
 	"github.com/Francesco99975/casaintake/views/ui"
 )
 
+// AuthGate is the passkey wall that protects the patient intake form.
+// UI/UX only — wire up the hx-post endpoint, session, and redirect separately.
+//
+// Collected field:
+//   passkey (clinical passkey / password)
 templ Index(site config.Site) {
 	@layouts.Base(site) {
+		<main class="flex-1 w-full flex items-center justify-center">
+			<!-- Theme toggle, pinned top-right -->
+			<div class="fixed top-4 right-4 z-20">
+				@ui.ThemeToggle()
+			</div>
+			<!-- Ambient background accents -->
+			<div class="pointer-events-none fixed inset-0 overflow-hidden" aria-hidden="true">
+				<div class="absolute -top-24 -left-24 h-72 w-72 rounded-full bg-primary/15 blur-3xl"></div>
+				<div class="absolute -bottom-32 -right-16 h-80 w-80 rounded-full bg-accent/15 blur-3xl"></div>
+			</div>
+			<div class="relative w-full max-w-md px-4 py-10 sm:py-16">
+				<!-- Brand mark -->
+				<div class="mb-6 flex justify-center">
+					<span class="inline-flex h-14 w-14 items-center justify-center rounded-2xl bg-primary text-primary-fg shadow-lg">
+						@icons.Lock("h-7 w-7")
+					</span>
+				</div>
+				<!-- Card -->
+				<form
+					id="auth-form"
+					class="card relative p-6 sm:p-8"
+					hx-post="/authorize"
+					hx-swap="none"
+					{ ui.WithLoading("auth-loading")... }
+				>
+					<header class="text-center">
+						<span class="inline-flex items-center gap-2 rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-primary">
+							<span class="pulse-dot"></span>
+							Restricted Access
+						</span>
+						<h1 class="mt-4 text-xl sm:text-2xl font-bold text-fg text-balance">
+							Use Clinical Passkey to Authorize Patients Intake
+						</h1>
+						<p class="mt-2 text-sm text-muted leading-relaxed text-pretty">
+							Enter your clinical passkey to unlock the patient intake form.
+						</p>
+					</header>
+					<div class="mt-6">
+						@ui.SecurePasswordInput(ui.PasswordProps{
+							Name:        "passkey",
+							Label:       "Clinical passkey",
+							Placeholder: "Enter passkey",
+							Required:    true,
+							Attrs:       templ.Attributes{"autocomplete": "current-password", "autofocus": true},
+						})
+					</div>
+					<div class="mt-6">
+						@ui.Button(ui.ButtonProps{
+							Variant: ui.ButtonPrimary,
+							Size:    ui.ButtonLG,
+							Type:    ui.TypeSubmit,
+							FullW:   true,
+							Loading: ui.LoadingConfig{IndicatorID: "auth-loading", Text: "Verifying…"},
+						}) {
+							@icons.Lock("h-4 w-4")
+							Authorize Intake
+						}
+					</div>
+				</form>
+				<p class="mt-6 text-center text-xs text-muted">
+					Authorized clinic staff only. All access is logged.
+				</p>
+			</div>
+		</main>
+	}
+}
+
+templ PatientIntakeForm(site config.Site) {
+	@layouts.Base(site) {
 		<main class="flex-1 w-full">
+			<!-- Top utility bar: theme toggle + session logout -->
+			<div class="w-full border-b border-border bg-panel/60 backdrop-blur">
+				<div class="mx-auto w-full max-w-3xl px-4 py-3 flex items-center justify-between gap-3">
+					<span class="text-sm font-semibold text-fg">Patient Intake</span>
+					<div class="flex items-center gap-2">
+						@ui.ThemeToggle()
+						<form
+							hx-post="/logout"
+							hx-swap="outerHTML"
+							hx-indicator="#logout-spinner"
+							hx-disabled-elt="button"
+							hx-confirm="Are you sure you want to terminate the session?"
+							@submit="mobileMenuOpen = false"
+						>
+							@ui.Button(ui.ButtonProps{
+								Variant: ui.ButtonDanger,
+								Type:    ui.TypeSubmit,
+								Size:    ui.ButtonMD,
+								Loading: ui.LoadingConfig{IndicatorID: "logout-spinner"},
+							}) {
+								@icons.LogOut("w-5 h-5")
+								<span class="font-semibold hidden md:inline">Shutdown</span>
+							}
+						</form>
+					</div>
+				</div>
+			</div>
 			<div class="mx-auto w-full max-w-3xl px-4 py-8 sm:py-12 md:py-16">
 				<!-- Heading -->
 				<header class="mb-8 text-center sm:text-left">
@@ -27,7 +129,7 @@ templ Index(site config.Site) {
 				<form
 					id="patient-form"
 					class="card relative p-5 sm:p-7 md:p-8"
-					hx-post="/patients"
+					hx-post="/intake"
 					hx-swap="none"
 					{ ui.WithLoading("patient-loading")... }
 				>
@@ -39,7 +141,7 @@ templ Index(site config.Site) {
 						</h2>
 						<div class="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5">
 							@ui.Input(ui.InputProps{
-								Name:        "first_name",
+								Name:        "firstname",
 								Type:        ui.InputText,
 								Label:       "First name *",
 								Placeholder: "First name",
@@ -47,7 +149,7 @@ templ Index(site config.Site) {
 								Attrs:       templ.Attributes{"autocomplete": "given-name"},
 							})
 							@ui.Input(ui.InputProps{
-								Name:        "last_name",
+								Name:        "lastname",
 								Type:        ui.InputText,
 								Label:       "Last name *",
 								Placeholder: "Last name",
@@ -66,6 +168,7 @@ templ Index(site config.Site) {
 								Label:          "Phone *",
 								DefaultCountry: "CA",
 								Required:       true,
+								Danger:         false,
 							})
 							<div class="sm:col-span-2">
 								@ui.Input(ui.InputProps{
@@ -73,17 +176,16 @@ templ Index(site config.Site) {
 									Type:        ui.InputEmail,
 									Label:       "E-mail *",
 									Placeholder: "name@example.com",
+									Required:    true,
 									Attrs:       templ.Attributes{"autocomplete": "email"},
 								})
 							</div>
 							<div class="sm:col-span-2">
-								@ui.AddressInput(ui.AddressInputProps{
-									Name:          "address",
-									Label:         "Address *",
-									Hint:          "Start typing to search, or enter manually",
-									SearchURL:     "/api/v1/address/lookup",
-									Provider:      ui.AddressCanadaPost,
-									CountryFilter: "CA",
+								@ui.FracturedAddress(ui.FracturedAddressProps{
+									Name:     "address",
+									Legend:   "Address *",
+									Hint:     "Enter your address",
+									Required: true,
 								})
 							</div>
 						</div>
@@ -153,7 +255,7 @@ templ Index(site config.Site) {
 							type="submit"
 							class="btn-base w-full sm:w-auto rounded-lg bg-primary px-6 py-3 text-sm font-semibold text-primary-fg"
 						>
-							Save patient information
+							Sumbit your information
 						</button>
 					</div>
 				</form>

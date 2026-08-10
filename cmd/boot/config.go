@@ -35,7 +35,11 @@ type Config struct {
 	MetricSecret string
 	Prometheus   string
 
-	ResendAPIKey string
+	RecipientEmail       string
+	ResendAPIKey         string
+	SessionAuthKey       string
+	SessionEncryptionKey string
+	PassKey              string
 }
 
 var Environment = &Config{}
@@ -61,7 +65,12 @@ func LoadEnvVariables() error {
 		Environment.URL = fmt.Sprintf("https://%s", Environment.Host)
 	}
 
+	Environment.RecipientEmail = os.Getenv("RECIPIENT_EMAIL")
+
 	Environment.ResendAPIKey = os.Getenv("RESEND_API_KEY")
+	Environment.SessionAuthKey = os.Getenv("SESSION_AUTH_KEY")
+	Environment.SessionEncryptionKey = os.Getenv("SESSION_ENCRYPTION_KEY")
+	Environment.PassKey = os.Getenv("PASSKEY")
 
 	return nil
 }
