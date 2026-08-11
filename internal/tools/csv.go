@@ -3,6 +3,8 @@ package tools
 import (
 	"encoding/csv"
 	"fmt"
+	"log/slog"
+
 	"os"
 	"strings"
 	"time"
@@ -27,7 +29,11 @@ func GenerateCSV(patient models.PatientIntakeRequest) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("failed to create file: %v", err)
 	}
-	defer file.Close()
+	defer func() {
+		if err := file.Close(); err != nil {
+			slog.Error("failed to close file in generateCSV")
+		}
+	}()
 
 	// Initialize CSV writer
 	writer := csv.NewWriter(file)

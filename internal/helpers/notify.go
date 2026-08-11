@@ -44,7 +44,11 @@ func ResendNewPatientTemplate(email string, patient models.PatientIntakeRequest)
 		return
 	}
 
-	defer os.Remove(filename)
+	defer func() {
+		if err := os.Remove(filename); err != nil {
+			slog.Error("Failed to remove CSV", slog.Any("error", err))
+		}
+	}()
 
 	params := &resend.SendEmailRequest{
 		From: "Patients Intake <intake@auth.urx.ink>",
