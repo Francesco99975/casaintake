@@ -1190,8 +1190,19 @@ const dobXData = `{
 		this.minAge=parseInt(d.minage||'0',10);
 		this.maxAge=parseInt(d.maxage||'120',10);
 		if(d.initial){ const p=d.initial.split('-').map(Number); if(p[0]&&p[1]&&p[2]){ this.year=p[0]; this.month=p[1]; this.day=p[2]; } }
+		const form = this.$el.closest('form');
+			if (form) {
+				this._onReset = () => {
+				  this.day=''; this.month=''; this.year='';
+				};
+				form.addEventListener('reset', this._onReset);
+			}
+		this.$watch('iso', (val) => console.log('iso changed to', JSON.stringify(val)));
 		this.$watch('iso',()=>{ this.$refs.hidden.dispatchEvent(new Event('change',{bubbles:true})); });
 	},
+	destroy(){
+		if (this._onReset) this.$el.closest('form')?.removeEventListener('reset', this._onReset);
+},
 	get years(){ const now=new Date().getFullYear(); const out=[]; for(let y=now-this.minAge;y>=now-this.maxAge;y--)out.push(y); return out; },
 	get days(){ const dim=(this.month&&this.year)?new Date(this.year,this.month,0).getDate():31; return Array.from({length:dim},(_,i)=>i+1); },
 	get complete(){ return !!(this.day&&this.month&&this.year); },
@@ -1341,20 +1352,33 @@ const phoneCountriesJS = `[` +
 
 // phoneXData is the complete inline Alpine component — no registration script.
 // Config comes from this.$el.dataset (country / initial / required).
+//
+// `touched` starts false so the field never renders in an error state on first
+// paint. It flips true once the user blurs the national field (or a prefilled
+// value fails validation), and the red styling is driven by `showError`
+// (touched && invalid) rather than `invalid` directly.
 const phoneXData = `{
-	open:false, q:'', country:'US', national:'', required:false, countries:` + phoneCountriesJS + `,
+	open:false, q:'', country:'US', national:'', required:false, touched:false, countries:` + phoneCountriesJS + `,
 	init(){
 		const d=this.$el.dataset;
 		this.country=d.country||'US';
 		this.required=d.required==='true';
-		if(d.initial) this.parseE164(d.initial);
+		if(d.initial){ this.parseE164(d.initial); this.touched=true; }
 		this.format();
+		const form = this.$el.closest('form');
+			if (form) {
+				this._onReset = () => {
+		  			this.touched=false;
+				};
+				form.addEventListener('reset', this._onReset);
+			}
 		this.$watch('e164',()=>{ this.$refs.hidden.dispatchEvent(new Event('change',{bubbles:true})); });
 	},
 	get current(){ return this.countries.find(c=>c.iso===this.country)||this.countries[0]; },
 	get digits(){ return this.national.replace(/\D/g,''); },
 	get e164(){ return this.digits?this.current.dial+this.digits:''; },
 	get invalid(){ if(this.required&&!this.digits)return true; return this.digits.length>0&&(this.digits.length<4||this.digits.length>15); },
+	get showError(){ return this.touched&&this.invalid; },
 	get filtered(){ const q=this.q.trim().toLowerCase(); if(!q)return this.countries; return this.countries.filter(c=>c.name.toLowerCase().includes(q)||c.iso.toLowerCase().includes(q)||c.dial.includes(q)); },
 	toggle(){ this.open=!this.open; if(this.open){ this.q=''; this.$nextTick(()=>this.$refs.search.focus()); } },
 	choose(iso){ this.country=iso; this.open=false; },
@@ -1393,7 +1417,7 @@ if dc == "" {
 		<!-- Group: dial-code button + national number, styled as one field-like row -->
 		<div
 			class="flex items-stretch rounded-lg border border-border bg-surface transition-colors focus-within:border-primary focus-within:ring-2 focus-within:ring-ring/40"
-			:class="invalid ? 'border-error' : ''"
+			:class="showError ? 'border-error' : ''"
 		>
 			<!-- Country selector -->
 			<div class="relative flex-none">
@@ -1463,6 +1487,7 @@ if dc == "" {
 				autocomplete="tel-national"
 				x-model="national"
 				@input="format()"
+				@blur="touched = true"
 				placeholder={ ph }
 				class="flex-1 min-w-0 bg-transparent px-3 py-2.5 text-sm text-fg placeholder:text-muted focus:outline-none"
 				aria-label="Phone number"

@@ -4,11 +4,14 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	"os"
+	"path"
 	"strings"
 	"time"
 
 	"github.com/Francesco99975/casaintake/cmd/boot"
 	"github.com/Francesco99975/casaintake/internal/models"
+	"github.com/Francesco99975/casaintake/internal/tools"
 	"github.com/resend/resend-go/v3"
 )
 
@@ -29,6 +32,20 @@ func Notify(topic string, message string) {
 func ResendNewPatientTemplate(email string, patient models.PatientIntakeRequest) {
 	client := resend.NewClient(boot.Environment.ResendAPIKey)
 
+	filename, err := tools.GenerateCSV(patient)
+	if err != nil {
+		slog.Error("Failed to generate CSV", slog.Any("error", err))
+		return
+	}
+
+	contentBytes, err := os.ReadFile(filename)
+	if err != nil {
+		slog.Error("Failed to read CSV", slog.Any("error", err))
+		return
+	}
+
+	defer os.Remove(filename)
+
 	params := &resend.SendEmailRequest{
 		From: "Patients Intake <intake@auth.urx.ink>",
 		To:   []string{email},
@@ -46,6 +63,13 @@ func ResendNewPatientTemplate(email string, patient models.PatientIntakeRequest)
 				"MEDICAL_HISTORY": strings.Join(patient.Conditions, ","),
 				"EXTRA_NOTES":     patient.OtherConditions,
 				"SUBMITTED_AT":    time.Now().Format("January 2, 2006 at 15:04"),
+			},
+		},
+		Attachments: []*resend.Attachment{
+			{
+				Filename:    path.Base(filename),
+				Content:     contentBytes,
+				ContentType: "text/csv",
 			},
 		},
 	}

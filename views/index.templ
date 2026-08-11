@@ -131,6 +131,7 @@ templ PatientIntakeForm(site config.Site) {
 					class="card relative p-5 sm:p-7 md:p-8"
 					hx-post="/intake"
 					hx-swap="none"
+					hx-on::after-request="if(event.detail.successful){ this.reset(); this.dispatchEvent(new Event('reset', {bubbles:true})); }"
 					{ ui.WithLoading("patient-loading")... }
 				>
 					@ui.FormLoading("patient-loading", "Saving patient information…")

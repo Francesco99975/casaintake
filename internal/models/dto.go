@@ -2,7 +2,10 @@ package models
 
 import (
 	"errors"
+	"fmt"
 	"net/mail"
+	"regexp"
+	"strings"
 	"time"
 )
 
@@ -49,6 +52,51 @@ func (p *PatientIntakeRequest) StringifyAddress() string {
 	return p.AddressStreetNumber + " " + p.AddressStreetName + ", " + p.AddressCity + ", " + p.AddressRegion + " " + p.AddressPostal
 }
 
+func (p *PatientIntakeRequest) NormalizePhone() (string, error) {
+	// Keep only digits.
+	digits := regexp.MustCompile(`\D`).ReplaceAllString(p.Phone, "")
+
+	// Remove North American country code.
+	if len(digits) == 11 && digits[0] == '1' {
+		digits = digits[1:]
+	}
+
+	if len(digits) != 10 {
+		return "", fmt.Errorf("invalid phone number: %q", p.Phone)
+	}
+
+	return fmt.Sprintf(
+		"+1 (%s) %s-%s",
+		digits[:3],
+		digits[3:6],
+		digits[6:],
+	), nil
+}
+
+func (p *PatientIntakeRequest) NormalizeOHIP() (string, error) {
+	// Remove spaces and dashes, normalize case.
+	input := strings.ToUpper(strings.TrimSpace(p.OHIP))
+	input = strings.ReplaceAll(input, " ", "")
+	input = strings.ReplaceAll(input, "-", "")
+
+	// OHIP: 10 digits total + 2-letter version code.
+	re := regexp.MustCompile(`^(\d{9})(\d)([A-Z]{2})$`)
+	matches := re.FindStringSubmatch(input)
+
+	if matches == nil {
+		return "", fmt.Errorf("invalid OHIP format: %q", input)
+	}
+
+	// Format as: 1234-567-889-VC
+	return fmt.Sprintf(
+		"%s-%s-%s-%s",
+		matches[1][:4],
+		matches[1][4:7],
+		matches[1][7:],
+		matches[3],
+	), nil
+}
+
 func (p *PatientIntakeRequest) Validate() error {
 	if p.FirstName == "" {
 		return errors.New("first name is required")
@@ -65,6 +113,12 @@ func (p *PatientIntakeRequest) Validate() error {
 	if p.Phone == "" {
 		return errors.New("phone is required")
 	}
+
+	normalized, err := p.NormalizePhone()
+	if err != nil {
+		return err
+	}
+	p.Phone = normalized
 
 	if p.Email == "" {
 		return errors.New("email is required")
@@ -96,6 +150,18 @@ func (p *PatientIntakeRequest) Validate() error {
 	}
 	if p.AddressCountry == "" {
 		return errors.New("address country is required")
+	}
+
+	if p.OHIP == "" && p.OtherInsurance == "" {
+		return errors.New("no insurance information provided, either OHIP or other insurance is required")
+	}
+
+	if p.OHIP != "" {
+		normalized, err := p.NormalizeOHIP()
+		if err != nil {
+			return err
+		}
+		p.OHIP = normalized
 	}
 
 	return nil
