@@ -85,32 +85,32 @@ templ PatientIntakeForm(site config.Site) {
 	@layouts.Base(site) {
 		<main class="flex-1 w-full">
 			<!-- Top utility bar: theme toggle + session logout -->
-			<div class="w-full border-b border-border bg-panel/60 backdrop-blur">
-				<div class="mx-auto w-full max-w-3xl px-4 py-3 flex items-center justify-between gap-3">
-					<span class="text-sm font-semibold text-fg">Patient Intake</span>
-					<div class="flex items-center gap-2">
-						@ui.ThemeToggle()
-						<form
-							hx-post="/logout"
-							hx-swap="outerHTML"
-							hx-indicator="#logout-spinner"
-							hx-disabled-elt="button"
-							hx-confirm="Are you sure you want to terminate the session?"
-							@submit="mobileMenuOpen = false"
-						>
-							@ui.Button(ui.ButtonProps{
-								Variant: ui.ButtonDanger,
-								Type:    ui.TypeSubmit,
-								Size:    ui.ButtonMD,
-								Loading: ui.LoadingConfig{IndicatorID: "logout-spinner"},
-							}) {
-								@icons.LogOut("w-5 h-5")
-								<span class="font-semibold hidden md:inline">Shutdown</span>
-							}
-						</form>
-					</div>
-				</div>
-			</div>
+			// <div class="w-full border-b border-border bg-panel/60 backdrop-blur">
+			// 	<div class="mx-auto w-full max-w-3xl px-4 py-3 flex items-center justify-between gap-3">
+			// 		<span class="text-sm font-semibold text-fg">Patient Intake</span>
+			// 		<div class="flex items-center gap-2">
+			// 			@ui.ThemeToggle()
+			// 			<form
+			// 				hx-post="/logout"
+			// 				hx-swap="outerHTML"
+			// 				hx-indicator="#logout-spinner"
+			// 				hx-disabled-elt="button"
+			// 				hx-confirm="Are you sure you want to terminate the session?"
+			// 				@submit="mobileMenuOpen = false"
+			// 			>
+			// 				@ui.Button(ui.ButtonProps{
+			// 					Variant: ui.ButtonDanger,
+			// 					Type:    ui.TypeSubmit,
+			// 					Size:    ui.ButtonMD,
+			// 					Loading: ui.LoadingConfig{IndicatorID: "logout-spinner"},
+			// 				}) {
+			// 					@icons.LogOut("w-5 h-5")
+			// 					<span class="font-semibold hidden md:inline">Shutdown</span>
+			// 				}
+			// 			</form>
+			// 		</div>
+			// 	</div>
+			// </div>
 			<div class="mx-auto w-full max-w-3xl px-4 py-8 sm:py-12 md:py-16">
 				<!-- Heading -->
 				<header class="mb-8 text-center sm:text-left">

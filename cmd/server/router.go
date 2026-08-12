@@ -151,11 +151,11 @@ Sitemap: %s/sitemap.xml
 		},
 	}))
 
-	web.GET("/", controllers.Index(), middlewares.GuestMiddleware())
-	web.POST("/authorize", controllers.Authorize())
-	web.GET("/intake", controllers.Intake(), middlewares.AuthMiddleware())
-	web.POST("/intake", controllers.NewPatient(), middlewares.AuthMiddleware())
-	web.POST("/logout", controllers.Logout(), middlewares.AuthMiddleware())
+	web.GET("/", controllers.Intake())
+	// web.POST("/authorize", controllers.Authorize())
+	// web.GET("/intake", controllers.Intake(), middlewares.AuthMiddleware())
+	web.POST("/intake", controllers.NewPatient())
+	// web.POST("/logout", controllers.Logout(), middlewares.AuthMiddleware())
 	web.GET("/privacy-policy", controllers.PrivacyPolicy())
 	web.GET("/terms", controllers.Terms())
 
