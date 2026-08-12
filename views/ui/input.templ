@@ -72,6 +72,10 @@ templ DynamicHiddenInput(id string, value string) {
 	<input type="hidden" id={ id } name={ id } :value={ value }/>
 }
 
+templ HoneyPotInput(id string) {
+	<input aria-hidden="true" tabindex="-1" type="text" class="fild" id={ id } name={ id } autocomplete="off"/>
+}
+
 templ ModelOTPInput(id string) {
 	<div>
 		<label class="block text-sm font-medium text-fg mb-2">Verification Code</label>

@@ -3,10 +3,14 @@ package models
 import (
 	"errors"
 	"fmt"
+	"log/slog"
 	"net/mail"
 	"regexp"
 	"strings"
 	"time"
+
+	"github.com/Francesco99975/casaintake/cmd/boot"
+	"github.com/Francesco99975/casaintake/internal/enums"
 )
 
 // PatientIntakeRequest represents the data submitted by the patient intake form.
@@ -80,20 +84,22 @@ func (p *PatientIntakeRequest) NormalizeOHIP() (string, error) {
 	input = strings.ReplaceAll(input, "-", "")
 
 	// OHIP: 10 digits total + 2-letter version code.
-	re := regexp.MustCompile(`^(\d{9})(\d)([A-Z]{2})$`)
+	re := regexp.MustCompile(`^(\d{10})([A-Z]{2})$`)
 	matches := re.FindStringSubmatch(input)
-
 	if matches == nil {
 		return "", fmt.Errorf("invalid OHIP format: %q", input)
 	}
 
-	// Format as: 1234-567-889-VC
+	number := matches[1]      // all 10 digits
+	versionCode := matches[2] // 2-letter version code
+
+	// Format as: 1234-567-890-VC
 	return fmt.Sprintf(
 		"%s-%s-%s-%s",
-		matches[1][:4],
-		matches[1][4:7],
-		matches[1][7:],
-		matches[3],
+		number[:4],
+		number[4:7],
+		number[7:], // now correctly digits 8-9-10 (3 digits)
+		versionCode,
 	), nil
 }
 
@@ -133,6 +139,12 @@ func (p *PatientIntakeRequest) Validate() error {
 	}
 	p.Email = addr.Address
 
+	if boot.Environment.GoEnv == enums.Environments.PRODUCTION {
+		if IsSuspiciousEmail(p.Email) {
+			return errors.New("suspicious email address")
+		}
+	}
+
 	if p.AddressStreetNumber == "" {
 		return errors.New("address street number is required")
 	}
@@ -162,6 +174,11 @@ func (p *PatientIntakeRequest) Validate() error {
 			return err
 		}
 		p.OHIP = normalized
+		slog.Debug("normalized OHIP", "ohip", p.OHIP)
+
+		if !IsValidOHIP(p.OHIP) {
+			return errors.New("invalid OHIP number")
+		}
 	}
 
 	return nil

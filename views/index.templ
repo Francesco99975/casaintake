@@ -2,6 +2,8 @@ package views
 
 import (
 	"github.com/Francesco99975/casaintake/internal/config"
+	"github.com/Francesco99975/casaintake/internal/helpers"
+	"github.com/Francesco99975/casaintake/views/components"
 	"github.com/Francesco99975/casaintake/views/icons"
 	"github.com/Francesco99975/casaintake/views/layouts"
 	"github.com/Francesco99975/casaintake/views/ui"
@@ -134,6 +136,9 @@ templ PatientIntakeForm(site config.Site) {
 					hx-on::after-request="if(event.detail.successful){ this.reset(); this.dispatchEvent(new Event('reset', {bubbles:true})); }"
 					{ ui.WithLoading("patient-loading")... }
 				>
+					@ui.HoneyPotInput("url")
+					@components.CSRF(site.CSRF)
+					@ui.HiddenInput("start", helpers.GenerateStartToken())
 					@ui.FormLoading("patient-loading", "Saving patient information…")
 					<!-- ============ SECTION: Personal details ============ -->
 					<section aria-labelledby="sec-personal">

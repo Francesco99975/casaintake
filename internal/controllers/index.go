@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"fmt"
 	"net/http"
 
 	"github.com/Francesco99975/casaintake/cmd/boot"
@@ -57,7 +58,7 @@ func NewPatient() echo.HandlerFunc {
 
 		err := payload.Validate()
 		if err != nil {
-			return herr.Handle(c.Response(), http.StatusBadRequest, err)
+			return herr.Handle(c.Response(), http.StatusBadRequest, fmt.Errorf("validation failed -> %w", err))
 		}
 
 		go helpers.ResendNewPatientTemplate(boot.Environment.RecipientEmail, payload)

@@ -37,19 +37,27 @@ const ohipXData = `{
 	get ver(){ return this.version.replace(/[^a-zA-Z]/g,'').toUpperCase().slice(0,2); },
 	luhn(n){ let sum=0, alt=false; for(let i=n.length-1;i>=0;i--){ let d=parseInt(n[i],10); if(alt){ d*=2; if(d>9)d-=9; } sum+=d; alt=!alt; } return n.length===10 && sum%10===0; },
 	get numberValid(){ return this.digits.length===10 && this.luhn(this.digits); },
-	get valid(){ return this.disabled || (this.numberValid && this.ver.length===2); },
-	get invalid(){
-		if(this.disabled) return false;
-		return (this.digits.length>0 && this.digits.length<10)
-			|| (this.digits.length===10 && !this.numberValid)
-			|| (this.ver.length===1);
+	get valid() {
+	  return this.disabled || (this.numberValid && this.ver.length <= 2);
 	},
-	get message(){
-		if(this.disabled) return '';
-		if(this.digits.length>0 && this.digits.length<10) return 'Health number must be 10 digits.';
-		if(this.digits.length===10 && !this.luhn(this.digits)) return 'This health number fails the checksum — please re-check the digits.';
-		if(this.ver.length===1) return 'Version code must be 2 letters.';
-		return '';
+
+	get invalid() {
+	  if (this.disabled) return false;
+	  if (this.digits.length > 0 && this.digits.length < 10) return true;
+	  if (this.digits.length === 10 && !this.numberValid) return true;
+	  if (this.ver.length > 2) return true;
+	  return false;
+	},
+
+	get message() {
+	  if (this.disabled) return '';
+	  if (this.digits.length > 0 && this.digits.length < 10)
+	    return 'Health number must be 10 digits.';
+	  if (this.digits.length === 10 && !this.numberValid)
+	    return 'This health number fails the checksum — please re-check the digits.';
+	  if (this.ver.length > 2)
+	    return 'Version code can be at most 2 letters.';
+	  return '';
 	},
 	get value(){ if(this.disabled) return 'NONE'; if(!this.digits) return ''; return this.digits + (this.ver ? (' '+this.ver) : ''); },
 	format(){ const d=this.digits; let out=d; if(d.length>7)out=d.slice(0,4)+'-'+d.slice(4,7)+'-'+d.slice(7); else if(d.length>4)out=d.slice(0,4)+'-'+d.slice(4); this.raw=out; },

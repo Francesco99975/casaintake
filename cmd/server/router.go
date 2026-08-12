@@ -11,12 +11,14 @@ import (
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"golang.org/x/time/rate"
 
 	"github.com/Francesco99975/casaintake/cmd/boot"
 	"github.com/Francesco99975/casaintake/internal/auth"
 	"github.com/Francesco99975/casaintake/internal/config"
 	"github.com/Francesco99975/casaintake/internal/enums"
 	"github.com/Francesco99975/casaintake/internal/helpers"
+	"github.com/Francesco99975/casaintake/internal/httperr"
 
 	"github.com/Francesco99975/casaintake/internal/controllers"
 	"github.com/Francesco99975/casaintake/internal/middlewares"
@@ -28,6 +30,54 @@ import (
 )
 
 func createRouter() *echo.Echo {
+
+	globalLimiterConfig := middleware.RateLimiterConfig{
+		Skipper: middleware.DefaultSkipper,
+
+		Store: middleware.NewRateLimiterMemoryStoreWithConfig(
+			middleware.RateLimiterMemoryStoreConfig{
+				Rate:      rate.Limit(5),   // 5 requests per second
+				Burst:     10,              // allow short bursts up to 10
+				ExpiresIn: 3 * time.Minute, // clean up inactive IPs
+			},
+		),
+
+		IdentifierExtractor: func(c echo.Context) (string, error) {
+			return c.RealIP(), nil
+		},
+
+		// When we can't extract the identifier
+		ErrorHandler: func(c echo.Context, err error) error {
+			herr := httperr.New("unable to extract identifier", "GlobalRateLimiter-ErrorHandler", c.Request().Header.Get("X-Request-ID"))
+			return herr.HandleEchoPage(http.StatusInternalServerError, err)
+		},
+
+		// When rate limit is exceeded
+		DenyHandler: func(c echo.Context, identifier string, err error) error {
+			herr := httperr.New("rate limit exceeded", "GlobalRateLimiter-DenyHandler", c.Request().Header.Get("X-Request-ID"))
+			return herr.HandleEchoPage(http.StatusTooManyRequests, err)
+		},
+	}
+
+	// Stricter limit only on the form submission
+	intakeLimiter := middleware.RateLimiterWithConfig(middleware.RateLimiterConfig{
+		Store: middleware.NewRateLimiterMemoryStoreWithConfig(
+			middleware.RateLimiterMemoryStoreConfig{
+				Rate:      rate.Every(12 * time.Second), // ~5 per minute
+				Burst:     3,                            // allow 3 quick submits
+				ExpiresIn: 5 * time.Minute,
+			},
+		),
+		IdentifierExtractor: func(c echo.Context) (string, error) {
+			return c.RealIP(), nil
+		},
+		DenyHandler: func(c echo.Context, identifier string, err error) error {
+			// Silent-ish for bots, clear for real users
+			herr := httperr.New("rate limit exceeded", "IntakeRateLimiter-DenyHandler", c.Request().Header.Get("X-Request-ID"))
+			return herr.HandleEchoPage(http.StatusTooManyRequests, err)
+		},
+	})
+
 	e := echo.New()
 	e.Logger.SetOutput(io.Discard)
 	e.HideBanner = true
@@ -35,7 +85,7 @@ func createRouter() *echo.Echo {
 	e.Use(session.Middleware(auth.SessionStore))
 	e.Use(middlewares.SlogLogger())
 	e.Use(middleware.RemoveTrailingSlash())
-	e.Use(middlewares.RateLimiter())
+
 	// Apply Gzip middleware, but skip it for /metrics
 	e.Use(middleware.GzipWithConfig(middleware.GzipConfig{
 		Level: 5,
@@ -136,6 +186,7 @@ Sitemap: %s/sitemap.xml
 	web := e.Group("")
 
 	web.Use(middlewares.SecurityHeaders())
+	web.Use(middleware.RateLimiterWithConfig(globalLimiterConfig))
 
 	web.Use(middleware.CSRFWithConfig(middleware.CSRFConfig{
 		TokenLookup:    "form:_csrf,header:X-CSRF-Token",
@@ -154,7 +205,7 @@ Sitemap: %s/sitemap.xml
 	web.GET("/", controllers.Intake())
 	// web.POST("/authorize", controllers.Authorize())
 	// web.GET("/intake", controllers.Intake(), middlewares.AuthMiddleware())
-	web.POST("/intake", controllers.NewPatient())
+	web.POST("/intake", controllers.NewPatient(), middlewares.HoneyPotMiddleware(), intakeLimiter, middlewares.MinSubmitTime(time.Second*3))
 	// web.POST("/logout", controllers.Logout(), middlewares.AuthMiddleware())
 	web.GET("/privacy-policy", controllers.PrivacyPolicy())
 	web.GET("/terms", controllers.Terms())
