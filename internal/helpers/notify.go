@@ -62,6 +62,7 @@ func ResendNewPatientTemplate(email string, patient models.PatientIntakeRequest)
 				"ADDRESS":         patient.StringifyAddress(),
 				"PHONE":           patient.Phone,
 				"OHIP":            patient.OHIP,
+				"OHIP_EXPIRY":     patient.OHIPExpiry,
 				"INSURANCE_NOTES": patient.OtherInsurance,
 				"PATIENT_EMAIL":   patient.Email,
 				"MEDICAL_HISTORY": strings.Join(patient.Conditions, ","),

@@ -34,6 +34,7 @@ type PatientIntakeRequest struct {
 
 	// Insurance
 	OHIP           string `form:"ohip" validate:"omitempty,max=20"`
+	OHIPExpiry     string `form:"ohip-expiry" validate:"omitempty"`
 	OtherInsurance string `form:"other_insurance" validate:"omitempty,max=1000"`
 
 	// Medical History
@@ -171,10 +172,15 @@ func (p *PatientIntakeRequest) Validate() error {
 	if p.OHIP != "" {
 		normalized, err := p.NormalizeOHIP()
 		if err != nil {
-			return err
+			slog.Warn("OHIP normalization failed", "error", err)
+			return errors.New("OHIP invalid, try again")
 		}
 		p.OHIP = normalized
 		slog.Debug("normalized OHIP", "ohip", p.OHIP)
+
+		if p.OHIPExpiry == "" {
+			return errors.New("OHIP expiry is required")
+		}
 
 		if !IsValidOHIP(p.OHIP) {
 			return errors.New("invalid OHIP number")

@@ -24,28 +24,30 @@ type OHIPInputProps struct {
 // value is a hidden input: "<10 digits> <VC>", or the literal "NONE" when the
 // patient checks "I don't have an OHIP card".
 const ohipXData = `{
-	disabled:false, required:false, raw:'', version:'',
+	disabled:false, required:false, raw:'', version:'', expiry:'',
 	init(){
 		const d=this.$el.dataset;
 		this.required=d.required==='true';
 		if(d.initial) this.parse(d.initial);
+		if(d.expiry) this.expiry=d.expiry;
 		this.format();
 		this.$watch('value',()=>{ this.$refs.hidden.dispatchEvent(new Event('change',{bubbles:true})); });
 		this.$watch('disabled',()=>{ this.$refs.hidden.dispatchEvent(new Event('change',{bubbles:true})); });
 	},
+	get today(){ return new Date().toISOString().slice(0,10); },
 	get digits(){ return this.raw.replace(/\D/g,'').slice(0,10); },
 	get ver(){ return this.version.replace(/[^a-zA-Z]/g,'').toUpperCase().slice(0,2); },
 	luhn(n){ let sum=0, alt=false; for(let i=n.length-1;i>=0;i--){ let d=parseInt(n[i],10); if(alt){ d*=2; if(d>9)d-=9; } sum+=d; alt=!alt; } return n.length===10 && sum%10===0; },
 	get numberValid(){ return this.digits.length===10 && this.luhn(this.digits); },
-	get valid() {
-	  return this.disabled || (this.numberValid && this.ver.length <= 2);
-	},
+	get expired(){ return !!this.expiry && this.expiry < this.today; },
+	get valid(){ return this.disabled || (this.numberValid && this.ver.length===2 && !!this.expiry && !this.expired); },
 
 	get invalid() {
 	  if (this.disabled) return false;
 	  if (this.digits.length > 0 && this.digits.length < 10) return true;
 	  if (this.digits.length === 10 && !this.numberValid) return true;
 	  if (this.ver.length > 2) return true;
+	  if (this.expired) return true;
 	  return false;
 	},
 
@@ -57,12 +59,13 @@ const ohipXData = `{
 	    return 'This health number fails the checksum — please re-check the digits.';
 	  if (this.ver.length > 2)
 	    return 'Version code can be at most 2 letters.';
+	  if(this.expired) return 'This health card has expired — please renew it or contact ServiceOntario.';
 	  return '';
 	},
 	get value(){ if(this.disabled) return 'NONE'; if(!this.digits) return ''; return this.digits + (this.ver ? (' '+this.ver) : ''); },
 	format(){ const d=this.digits; let out=d; if(d.length>7)out=d.slice(0,4)+'-'+d.slice(4,7)+'-'+d.slice(7); else if(d.length>4)out=d.slice(0,4)+'-'+d.slice(4); this.raw=out; },
 	onVersion(){ this.version=this.ver; },
-	toggle(){ if(this.disabled){ this.raw=''; this.version=''; } },
+	toggle(){ if(this.disabled){ this.raw=''; this.version=''; this.expiry=''; } },
 	parse(v){ const s=String(v).trim(); if(s.toUpperCase()==='NONE'){ this.disabled=true; return; } const m=s.match(/([0-9]{10})\s*([A-Za-z]{0,2})/); if(m){ this.raw=m[1]; this.version=(m[2]||'').toUpperCase(); } }
 }`
 
@@ -74,6 +77,7 @@ templ OHIPInput(p OHIPInputProps) {
 		class="block"
 		x-data={ ohipXData }
 		data-initial={ p.Value }
+		data-expiry="ohip-expiry"
 		data-required={ fmt.Sprintf("%t", p.Required) }
 	>
 		if p.Label != "" {
@@ -123,6 +127,31 @@ templ OHIPInput(p OHIPInputProps) {
 				aria-label="Version code"
 			/>
 		</div>
+		<!-- Expiry date: a self-contained tile — tinted icon + caption, no validity gating -->
+		<label
+			class="mt-2 flex items-center gap-3 rounded-lg border border-border bg-surface p-2.5 cursor-text transition-colors focus-within:border-primary focus-within:ring-2 focus-within:ring-ring/40 cursor-pointer"
+			:class="disabled ? 'opacity-50 pointer-events-none' : ''"
+		>
+			<span
+				class="flex h-10 w-10 flex-none items-center justify-center rounded-md bg-primary/10 text-primary"
+				aria-hidden="true"
+			>
+				<svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"></rect><path d="M16 2v4M8 2v4M3 10h18"></path></svg>
+			</span>
+			<span class="min-w-0 flex-1">
+				<span class="block text-xs font-medium text-muted">Card expiry date</span>
+				<input
+					id="ohip-expiry"
+					name="ohip-expiry"
+					type="date"
+					x-ref="exp"
+					x-model="expiry"
+					:disabled="disabled"
+					class="w-full bg-transparent text-sm font-medium text-fg focus:outline-none cursor-pointer tabular-nums disabled:cursor-not-allowed [&::-webkit-calendar-picker-indicator]:hidden [&::-webkit-inner-spin-button]:hidden"
+					aria-label="Health card expiry date"
+				/>
+			</span>
+		</label>
 		<!-- "No OHIP" toggle: disables + clears the field, submits "NONE" -->
 		<label class="mt-2 flex items-center gap-2 cursor-pointer select-none w-fit">
 			<input type="checkbox" class="check" x-model="disabled" @change="toggle()"/>
